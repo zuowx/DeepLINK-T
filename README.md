@@ -79,6 +79,11 @@ Run the following code and the output is in `test/test.json`:
   $ python infer.py --input_path test/test_X.npy --response_path test/test_y.npy --output_path test/test.json
 ```
 
+The complete example may take several hours to run on GPU. Users may use the following code for a quicker test:
+```   
+  $ python infer.py --input_path test/test_X.npy --response_path test/test_y.npy --output_path test/test.json --n_iter 1 --aut_epoch 50 --mlp_epoch 50
+```
+
 ## Replicate studies in the paper
 
 ### Simulation studies
