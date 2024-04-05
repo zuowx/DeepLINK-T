@@ -23,6 +23,14 @@ Clone the github repository and enter DeepLINK-T directory with
   $ git clone https://github.com/zuowx/DeepLINK-T.git
   $ cd DeepLINK-T
 ```
+
+Create a conda environment for DeepLINK-T and install all packages with
+
+```
+  $ conda create -n $ENV_NAME python=3.7.6
+  $ conda activate $ENV_NAME
+  $ pip install -r requirements.txt
+```
     
 ## Usage
 
@@ -83,6 +91,8 @@ The complete example may take several hours to run on GPU. Users may use the fol
 ```   
   $ python infer.py --input_path test/test_X.npy --response_path test/test_y.npy --output_path test/test.json --n_iter 1 --aut_epoch 50 --mlp_epoch 50
 ```
+
+The inference can be finished in 1 minute if running on GPU. The output should be an empty `test.json` file in the `test` directory.
 
 ## Replicate studies in the paper
 
