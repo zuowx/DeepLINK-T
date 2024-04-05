@@ -48,6 +48,8 @@ Variable selection for classification task:
   $ python infer.py --input_path $INPUT_VARIABLES --response_path $RESPONSE --output_path $OUTPUT --fit_type classification
 ```
 
+The output of DeepLINK-T is a json file with each key as a feature index and each value as a list of ranks in each iteration. The length of the value list could be less than the number of specified iterations.
+
 
 
 ### Options for infer.py
