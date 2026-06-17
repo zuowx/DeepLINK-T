@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Dropout, LSTM, RepeatVector, TimeDistributed, BatchNormalization
+from tensorflow.keras.layers import Dense, Dropout, LSTM, RepeatVector, TimeDistributed, BatchNormalization, LayerNormalization
 from tensorflow.keras.models import Sequential
 from pairwise_connected_layer import PairwiseConnected
 from itertools import combinations
@@ -21,8 +21,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 class DeepLINK_T():
     def __init__(self, X, y,
-                 bottleneck_dim=64, ae_lr=0.001, ae_epoch=1000, ae_norm=None,
-                 stats_lstm_units=128, stats_lr=0.001, stats_epoch=1000,
+                 bottleneck_dim=64, ae_lr=0.001, ae_epoch=1000, ae_norm=None, ae_stacked=True,
+                 stats_lstm_units=128, stats_lr=0.001, stats_epoch=1000, 
                  q=0.2, ko_plus=True, fit_type='regression', response_type='sequence'
                 ):
         self.X = X
@@ -33,6 +33,7 @@ class DeepLINK_T():
         self.ae_lr = ae_lr
         self.ae_epoch = ae_epoch
         self.ae_norm = ae_norm
+        self.stacked = ae_stacked
 
         # parameters for LSTM prediction network
         self.stats_lstm_units = stats_lstm_units
@@ -58,18 +59,30 @@ class DeepLINK_T():
             elif self.ae_norm == 'ln':
                 model.add(LayerNormalization(axis=1))
             return model
-            
-        # LSTM autoencoder
-        autoencoder = Sequential()
-        autoencoder = add_normalization(autoencoder)
-        autoencoder.add(LSTM(self.bottleneck_dim, activation='tanh', return_sequences=False))
-        autoencoder.add(RepeatVector(n))
-        autoencoder = add_normalization(autoencoder)
-        autoencoder.add(LSTM(self.bottleneck_dim, activation='tanh', return_sequences=True))
-        autoencoder.add(TimeDistributed(Dense(p)))
-        autoencoder.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.ae_lr), loss='mean_squared_error')
-        autoencoder.fit(X, X, epochs=self.ae_epoch, verbose=verb)
-        C = autoencoder.predict(X)
+
+        if self.stacked == True:
+            # stacked LSTM
+            autoencoder = Sequential()
+            autoencoder.add(BatchNormalization())
+            autoencoder.add(LSTM(self.bottleneck_dim, activation='tanh', input_shape=(n, p), return_sequences=True))
+            autoencoder.add(BatchNormalization())
+            autoencoder.add(LSTM(p, activation='tanh', return_sequences=True))
+            autoencoder.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.ae_lr), loss='mean_squared_error')
+            autoencoder.fit(X, X, epochs=self.ae_epoch, verbose=verb)
+            C = autoencoder.predict(X)
+        else:
+             # LSTM autoencoder
+            autoencoder = Sequential()
+            autoencoder = add_normalization(autoencoder)
+            autoencoder.add(LSTM(self.bottleneck_dim, activation='tanh', return_sequences=False))
+            autoencoder.add(RepeatVector(n))
+            autoencoder = add_normalization(autoencoder)
+            autoencoder.add(LSTM(self.bottleneck_dim, activation='tanh', return_sequences=True))
+            autoencoder.add(TimeDistributed(Dense(p)))
+            autoencoder.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.ae_lr), loss='mean_squared_error')
+            autoencoder.fit(X, X, epochs=self.ae_epoch, verbose=verb)
+            C = autoencoder.predict(X)
+    
     
         # construct X_knockoff
         E = X - C

@@ -17,13 +17,6 @@ DeepLINK-T requires Python 3 (>= 3.7.6) with the following packages:
 
 ## Installation
 
-Clone the github repository and enter DeepLINK-T directory with
-
-```
-  $ git clone https://github.com/zuowx/DeepLINK-T.git
-  $ cd DeepLINK-T
-```
-
 Create a conda environment for DeepLINK-T and install all packages with
 
 ```
@@ -128,21 +121,52 @@ Codes used in the simulation studies are in `simulation.py`. Options for the scr
   --output_path OUTPUT_PATH
 ```
 
+#### Real-data simulation (simulation_rd.py)
+
+`simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. It requires the R package `imputeTS` (accessed via `rpy2`) to handle missing values in the input tensor before generating synthetic responses. 
+
+Additional dependencies beyond `requirements.txt`:
+
+- `rpy2 >= 3.0`
+- R package `imputeTS`
+
+Example usage:
+
+```
+  $ python simulation_rd.py --input_path $INPUT_X --y_design linear \
+      --s 10 --rho 0.9 --amplitude 10 --norm l2 \
+      --q 0.2 --it 50 --output_path $OUTPUT_CSV
+```
+
+Options specific to `simulation_rd.py` (options shared with `simulation.py` behave identically):
+
+```
+  --input_path INPUT_PATH
+                        path to the pre-generated explanatory variable tensor
+                        (.npy format, shape: number of subjects × time points × features)
+  --y_design Y_DESIGN   link function design (linear or nonlinear)
+  --s S                 number of true signals
+  --rho RHO             parameter in the AR(1) covariance structure
+  --amplitude AMPLITUDE
+                        amplitude of the true signals
+  --norm NORM           normalization applied to X before response generation
+                        (std for standardization, l2 for L2-column normalization)
+  --q Q                 targeted FDR level
+  --it IT               number of iterations
+  --n_bottleneck N_BOTTLENECK
+                        number of bottleneck dimensions in the autoencoder
+  --aut_epoch AUT_EPOCH
+                        number of autoencoder training epochs
+  --aut_lr AUT_LR       learning rate for the autoencoder
+  --aut_norm AUT_NORM   normalization inside the autoencoder (bn or ln)
+  --mlp_epoch MLP_EPOCH
+                        number of prediction network training epochs
+  --mlp_lr MLP_LR       learning rate for the prediction network
+  --output_path OUTPUT_PATH
+                        output path for the results CSV (rows: DLT / DLT_ae / DL,
+                        columns: mean, sd, per-iteration FDR and power)
+```
+
 ### Real data analyses
 
 Data used in the real data analyses are in folder `real_data/`. Detailed information of each real-world dataset is in `real_data/README.md`
-
-
-## Copyright and License Information
-
-Copyright (C) 2024 University of Southern California
-
-Authors: Wenxuan Zuo, Zifan Zhu, Yuxuan Du, Yi-Chun Yeh, Jed A. Fuhrman, Jinchi Lv, Yingying Fan, Fengzhu Sun
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Commercial users should contact Dr. Fengzhu Sun (<fsun@usc.edu>) or Dr. Yingying Fan (<fanyingy@usc.edu>), copyright at University of Southern California.
