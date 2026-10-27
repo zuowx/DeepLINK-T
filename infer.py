@@ -14,6 +14,7 @@ argparser.add_argument("--response_path", dest="response_path", help='path to th
 argparser.add_argument("--output_path", dest="output_path", default='output.json', help='output path for selection results (in .json format with key=feature, value=list of selected ranks in each run)')
 argparser.add_argument("--n_iter", dest="n_iter", type=int, default=200, help='number of iterations for running DeepLINK-T')
 argparser.add_argument("--q", dest="q", default=0.2, type=float, help='targeted FDR level')
+argparser.add_argument("--ko_plus", dest="ko_plus", default=1, type=int, help='1 for the knockoff+ threshold, 0 for the knockoff threshold')
 argparser.add_argument("--n_bottleneck", dest="n_bottleneck", default=15, help='number of bottleneck dimension in the autoencoder', type=int)
 argparser.add_argument("--aut_epoch", dest="aut_epoch", default=1000, help='number of autoencoder training epochs', type=int)
 argparser.add_argument("--aut_lr", dest="aut_lr", default=0.001, help='learning rate for the autoencoder', type=float)
@@ -30,12 +31,12 @@ if __name__ == '__main__':
     y = np.load(args.response_path)
     for i in range(len(X)):
         X_i = X[i]
-        X_i /= np.sqrt(np.sum(X_i ** 2, axis = 0))
+        X_i /= np.sqrt(np.nansum(X_i ** 2, axis = 0))
     feat_importance = defaultdict(list)
     for i in range(args.n_iter):
         print('Run_' + str(i + 1))
         dlt = DeepLINK_T(X, y,
-                         bottleneck_dim=args.n_bottleneck, ae_lr=args.aut_lr, ae_epoch=args.aut_epoch, ae_stacked=True,  stats_lr=args.mlp_lr, stats_epoch=args.mlp_epoch, q=args.q, fit_type=args.fit_type, response_type=args.response_type)
+                         bottleneck_dim=args.n_bottleneck, ae_lr=args.aut_lr, ae_epoch=args.aut_epoch, ae_stacked=True,  stats_lr=args.mlp_lr, stats_epoch=args.mlp_epoch, q=args.q, ko_plus=bool(args.ko_plus), fit_type=args.fit_type, response_type=args.response_type)
         selected_features = dlt.infer()
         for i, feat in enumerate(selected_features):
             feat_importance[int(feat)].append(i)

@@ -2,25 +2,19 @@
 import numpy as np
 import random
 
-import rpy2.robjects as robjects
-from rpy2.robjects import pandas2ri
-from rpy2.robjects.vectors import FloatVector
-from rpy2.robjects.packages import importr
-pandas2ri.activate()
-imputeTS = importr('imputeTS')
-
 class Simulation():
 # Simulation studies
 # Input:
 #   parameters for the factor model
-#   X: design matrix (shape of [m, n, p])
+#   X: design matrix (shape of [m, n, p]); missing time points are rows of NaN
 #   m: number of subjects
 #   n: number of time points
 #   p: number of features
 #   rho: parameters in AR(1) covariance structure to sample model errors
 #   parameters for the regression model
 #   s: number of true features (level of sparsity)
-#   A: signal amplitude
+#   A: signal amplitude; the nonzero coefficients are +-A * sqrt(n_obs / 1000), with n_obs the mean
+#      number of observed time points per subject
 #   link_design: form of the link function, choose from:
 #           1. 'linear': linear model
 #           2. 'nonlinear': noninear sin*exp model
@@ -46,108 +40,41 @@ class Simulation():
                 cov[j][i] = (sigma ** 2) * (rho ** abs(i - j))
         return cov
 
-    @staticmethod
-    def r_impute_univariate(arr_1d):
-        """
-        Imputes missing values in a 1D array using imputeTS.
-        Tries the Kalman method first; if it fails, falls back to interpolation.
-        Parameters:
-            arr_1d: numpy array (1D) with NaNs for missing values.
-        Returns:
-            Imputed 1D numpy array.
-        """
-        # Check if the entire array is NaN
-        if np.all(np.isnan(arr_1d)):
-            raise ValueError("Cannot impute an array with all NaN values.")
-        # Check if there are too few valid points (e.g., less than 2)
-        if np.sum(~np.isnan(arr_1d)) < 2:
-            raise ValueError("Too few valid data points to perform imputation.")
-        
-        # Convert to R vector and clean non-finite values
-        r_vec = FloatVector(arr_1d)
-        try:
-            # Attempt Kalman-based imputation
-            r_imputed = imputeTS.na_kalman(r_vec)
-        except Exception as e:
-            print(f"Kalman method failed: {e}")
-            print("Falling back to interpolation method...")
-            
-            # Fall back to interpolation-based imputation
-            r_imputed = imputeTS.na_interpolation(r_vec)
-    
-        # Convert back to NumPy array
-        return np.array(r_imputed, dtype=float)
-
-
-    # Response vector generation for multiple subjects
+    # Response vector generation for multiple subjects, at the observed time points only
     # Output:
-    #   [coefficient vector, response vector, noiseless response]
+    #   [coefficient vector, response vector (NaN at the missing time points)]
     def rvg(self, X_ms):
         m, n, p = X_ms.shape
-        btrue = np.random.choice([self.A, -self.A], size=self.s)
+        mask = np.isnan(X_ms).all(axis=2)
+        magnitude = self.A * np.sqrt((~mask).sum(axis=1).mean() / 1000)
+        btrue = np.random.choice([magnitude, -magnitude], size=self.s)
         bfalse = np.repeat(0, p - self.s)
         beta = np.concatenate((btrue, bfalse)).reshape((p, 1))
         np.random.shuffle(beta)
-    
-        y_ms, nl_y_ms = [], []
-        for i in range(len(X_ms)):
-            X = X_ms[i]
 
-            # Identify rows that are entirely NaN
-            all_nan_rows = np.isnan(X).all(axis=1)
-            
-            # Get the indices of these rows
-            nan_row_indices = np.where(all_nan_rows)[0]
-
-            # Now call imputeTS *feature by feature* (univariate)
-            for feature_idx in range(p):
-                # Impute output2
-                series_x = X[:, feature_idx]
-                # Only impute if there's at least one NaN
-                if np.any(np.isnan(series_x)):
-                    X[:, feature_idx] = self.r_impute_univariate(series_x)
-            
-            ### Normalize the data
-            if self.norm == 'std':
-                X -= np.mean(X, axis=0)
-                X /= np.std(X, axis=0, ddof=1)
-            elif self.norm == 'l2':
-                X /= np.sqrt(np.sum(X ** 2, axis = 0))
-                    
+        y_ms = np.full((m, n, 1), np.nan)
+        for i in range(m):
+            obs = ~mask[i]
             epsilon = np.random.multivariate_normal(mean=[0] * n, cov=self.ar1_cov(self.rho, n, 1)).reshape((n, 1))
             if self.link_design == 'linear':
-                X = np.array(X/100)
-                nl_y = X @ beta
-                y = nl_y + (1/100) * epsilon
+                nl_y = X_ms[i, obs] @ beta
             elif self.link_design == 'nonlinear':
-                X = np.array(X/100)
-                nl_y = np.sin(X @ beta) * np.exp(X @ beta)
-                y = nl_y + (1/100) * epsilon
-                
-            # Now call imputeTS *feature by feature* (univariate)
-            for nan_idx in nan_row_indices:             
-                # Impute y
-                y[nan_idx] = np.nan
-                
-            if np.any(np.isnan(y)):
-                y = self.r_impute_univariate(y)
-            y_ms.append(y)
-            nl_y_ms.append(nl_y)
-        return [beta, np.array(y_ms), X_ms]
+                nl_y = np.sin(X_ms[i, obs] @ beta) * np.exp(X_ms[i, obs] @ beta)
+            y_ms[i, obs] = nl_y + epsilon[obs]
+        return [beta, y_ms]
 
     def simulate(self):
-        X_ms = np.array(self.X)
-        # for m in range(len(X_ms)):
-        #     x = X_ms[m]
-        #     for n in range(len(x[0])):
-        #         avg, std = np.mean(x[:,n]), np.std(x[:,n])
-        #         x[:,n] = (x[:,n] - avg)/std
-        #     if self.link_design == 'nonlinear':
-        #         X_ms[m] = np.array(x/100)
-        #     else:
-        #         X_ms[m] = np.array(x)
+        X_ms = np.array(self.X, dtype=float)
+        ### Normalize each subject's data over its observed time points
+        for X in X_ms:
+            obs = ~np.isnan(X).all(axis=1)
+            if self.norm == 'std':
+                X[obs] -= np.mean(X[obs], axis=0)
+                X[obs] /= np.std(X[obs], axis=0, ddof=1)
+            elif self.norm == 'l2':
+                X[obs] /= np.sqrt(np.sum(X[obs] ** 2, axis=0))
         Gy = self.rvg(X_ms)
-        X = Gy[2]
+        X = X_ms
         y = Gy[1]
         true_beta = Gy[0]
         return X, y, true_beta
@@ -186,7 +113,7 @@ if __name__ == '__main__':
     argparser.add_argument("--output_path", dest="output_path")
     
     args = argparser.parse_args()
-    X = np.load(args.input_path)
+    X0 = np.load(args.input_path)
     
     print(
         'link function design: ', args.y_design, '\n',
@@ -214,7 +141,7 @@ if __name__ == '__main__':
 
     for i in range(args.it):
         print('Run_' + str(i + 1))
-        sim = Simulation(X=X, rho=args.rho, s=args.s, A=args.amplitude, norm=args.norm, link_design=args.y_design)
+        sim = Simulation(X=X0, rho=args.rho, s=args.s, A=args.amplitude, norm=args.norm, link_design=args.y_design)
         X, y, true_beta = sim.simulate()
         # To ensure y in the form of (m, n, 1)
         print("input shape: ", X.shape)

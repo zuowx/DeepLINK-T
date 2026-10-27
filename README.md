@@ -29,6 +29,8 @@ Create a conda environment for DeepLINK-T and install all packages with
 
 The inputs of DeepLINK-T are a data tensor (number of subjects $\times$ number of time points $\times$ number of features) and the corresponding response vector. Let the dimension of the data matrix be $m\times n\times p$. Then the response should be a array with dimensionality $m$ (scaler response) or a matrix with dimensionality $m\times n$ (sequence response). The input should be in '.npy' format and without row and column names. Another required argument is the output directory. The output of DeepLINK-T is a json file with key=feature, value=list of selected ranks in each run. Notice that feature index is 0-based.
 
+Time points missing from the data are rows of `NaN` in the data tensor (and in a sequence response). Each feature is L2-normalized per subject over its observed time points. DeepLINK-T then generates the knockoffs from the observed time points only. The features, their knockoffs and a sequence response are imputed at the missing time points, up to each subject's last observed time point, with `na_kalman` from the R package imputeTS (via `rpy2`). The time points after it are padding that the prediction network ignores.
+
 Variable selection for regression task:
 
 ```
@@ -38,7 +40,7 @@ Variable selection for regression task:
 Variable selection for classification task:
 
 ```
-  $ python infer.py --input_path $INPUT_VARIABLES --response_path $RESPONSE --output_path $OUTPUT --fit_type classification
+  $ python infer.py --input_path $INPUT_VARIABLES --response_path $RESPONSE --output_path $OUTPUT --fit_type classification --response_type scaler
 ```
 
 The output of DeepLINK-T is a json file with each key as a feature index and each value as a list of ranks in each iteration. The length of the value list could be less than the number of specified iterations.
@@ -61,6 +63,8 @@ The output of DeepLINK-T is a json file with each key as a feature index and eac
                         run)
   --n_iter N_ITER       number of iterations for running DeepLINK-T
   --q Q                 targeted FDR level
+  --ko_plus KO_PLUS     1 for the knockoff+ threshold, 0 for the knockoff
+                        threshold
   --n_bottleneck N_BOTTLENECK
                         number of bottleneck dimension in the autoencoder
   --aut_epoch AUT_EPOCH
@@ -123,7 +127,7 @@ Codes used in the simulation studies are in `simulation.py`. Options for the scr
 
 #### Real-data simulation (simulation_rd.py)
 
-`simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. It requires the R package `imputeTS` (accessed via `rpy2`) to handle missing values in the input tensor before generating synthetic responses. 
+`simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. Missing time points are rows of `NaN` in **X**. Each subject's features are normalized over its observed time points, the nonzero coefficients are ±A·√(n_obs/1000), where n_obs is the mean number of observed time points per subject, and the response is generated at the observed time points only. DeepLINK-T then handles the missing time points as described in Usage, which requires the R package `imputeTS` (accessed via `rpy2`).
 
 Additional dependencies beyond `requirements.txt`:
 
@@ -143,13 +147,15 @@ Options specific to `simulation_rd.py` (options shared with `simulation.py` beha
 ```
   --input_path INPUT_PATH
                         path to the pre-generated explanatory variable tensor
-                        (.npy format, shape: number of subjects × time points × features)
+                        (.npy format, shape: number of subjects × time points × features;
+                        missing time points as rows of NaN)
   --y_design Y_DESIGN   link function design (linear or nonlinear)
   --s S                 number of true signals
   --rho RHO             parameter in the AR(1) covariance structure
   --amplitude AMPLITUDE
                         amplitude of the true signals
-  --norm NORM           normalization applied to X before response generation
+  --norm NORM           normalization applied to X over each subject's observed
+                        time points before response generation
                         (std for standardization, l2 for L2-column normalization)
   --q Q                 targeted FDR level
   --it IT               number of iterations
