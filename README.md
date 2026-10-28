@@ -123,7 +123,7 @@ Codes used in the simulation studies are in `simulation.py`. Options for the scr
   --output_path OUTPUT_PATH
 ```
 
-#### Real-data simulation (simulation_rd.py)
+#### Real-data simulation
 
 `simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. Missing time points are rows of `NaN` in **X**. Each subject's features are normalized over its observed time points, the nonzero coefficients are ±A·√(n_obs/1000), where n_obs is the mean number of observed time points per subject, and the response is generated at the observed time points only. DeepLINK-T then handles the missing time points, which requires the R package `imputeTS` (accessed via `rpy2`).
 
@@ -138,37 +138,6 @@ Example usage:
   $ python simulation_rd.py --input_path $INPUT_X --y_design linear \
       --s 10 --rho 0.9 --amplitude 10 --norm l2 \
       --q 0.2 --it 50 --output_path $OUTPUT_CSV
-```
-
-Options specific to `simulation_rd.py` (options shared with `simulation.py` behave identically):
-
-```
-  --input_path INPUT_PATH
-                        path to the pre-generated explanatory variable tensor
-                        (.npy format, shape: number of subjects × time points × features;
-                        missing time points as rows of NaN)
-  --y_design Y_DESIGN   link function design (linear or nonlinear)
-  --s S                 number of true signals
-  --rho RHO             parameter in the AR(1) covariance structure
-  --amplitude AMPLITUDE
-                        amplitude of the true signals
-  --norm NORM           normalization applied to X over each subject's observed
-                        time points before response generation
-                        (std for standardization, l2 for L2-column normalization)
-  --q Q                 targeted FDR level
-  --it IT               number of iterations
-  --n_bottleneck N_BOTTLENECK
-                        number of bottleneck dimensions in the autoencoder
-  --aut_epoch AUT_EPOCH
-                        number of autoencoder training epochs
-  --aut_lr AUT_LR       learning rate for the autoencoder
-  --aut_norm AUT_NORM   normalization inside the autoencoder (bn or ln)
-  --mlp_epoch MLP_EPOCH
-                        number of prediction network training epochs
-  --mlp_lr MLP_LR       learning rate for the prediction network
-  --output_path OUTPUT_PATH
-                        output path for the results CSV (rows: DLT / DLT_ae / DL,
-                        columns: mean, sd, per-iteration FDR and power)
 ```
 
 ### Real data analyses
