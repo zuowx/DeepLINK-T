@@ -46,6 +46,14 @@ def to_full_grid(Z, mask):
     return out
 
 
+# Per-step loss weights that leave the imputed responses out of the fit: 0 at the missing time points,
+# and at the observed ones the constant that makes the weights average 1. Keras divides a weighted loss
+# by all m * n steps, so the loss is then the mean over the observed time points
+def observed_weights(mask):
+    w = (~mask).astype(float)
+    return w * (w.size / w.sum())
+
+
 # Missing time points after each subject's last observed one
 def tail_mask(mask):
     tail = np.zeros_like(mask)

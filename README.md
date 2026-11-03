@@ -1,9 +1,9 @@
 # DeepLINK-T: deep learning inference for time series data using knockoffs and LSTM
 
-DeepLINK-T is a variable selection framework that guarantees the false discovery rate (FDR) control in time series data. Three key ingredients for DeepLINK-T are 
-1) a Long Short-Term Memory (LSTM) autoencoder for generating time series knockoff variables,
+DeepLINK-T is a variable selection framework for time series data that targets false discovery rate (FDR) control with knockoffs. The control is exact in finite samples for oracle knockoffs, and asymptotic, under the conditions stated in the paper, for the LSTM-generated knockoffs used in practice. Three key ingredients for DeepLINK-T are 
+1) a stacked Long Short-Term Memory (LSTM) network (the default) or an LSTM autoencoder for generating time series knockoff variables,
 2) an LSTM prediction network using both original and knockoff variables,
-3) the application of the knockoffs framework for variable selection with FDR control.
+3) the application of the knockoffs framework for variable selection at a target FDR level.
 
 ## Dependencies
 
@@ -125,7 +125,7 @@ Codes used in the simulation studies are in `simulation.py`. Options for the scr
 
 #### Real-data simulation
 
-`simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. Missing time points are rows of `NaN` in **X**. Each subject's features are normalized over its observed time points, the nonzero coefficients are ±A·√(n_obs/1000), where n_obs is the mean number of observed time points per subject, and the response is generated at the observed time points only. DeepLINK-T then handles the missing time points, which requires the R package `imputeTS` (accessed via `rpy2`).
+`simulation_rd.py` extends the simulation framework to settings where the design tensor **X** comes from a real dataset rather than a synthetic factor model. Missing time points are rows of `NaN` in **X**. Each subject's features are normalized over its observed time points, the nonzero coefficients are ±A·√(n_obs/1000), where n_obs is the mean number of observed time points per subject, and the response is generated at the observed time points only. DeepLINK-T then generates the knockoffs from the observed time points, imputes the features and knockoffs at the missing ones, and fits the prediction network to the observed responses only, which requires the R package `imputeTS` (accessed via `rpy2`).
 
 Additional dependencies beyond `requirements.txt`:
 

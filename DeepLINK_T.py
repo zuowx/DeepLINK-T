@@ -6,7 +6,7 @@ from tensorflow.keras.models import Sequential
 from pairwise_connected_layer import PairwiseConnected
 from itertools import combinations
 from tensorflow.keras.callbacks import EarlyStopping
-from missing import compact, to_full_grid, tail_mask, fill_between
+from missing import compact, to_full_grid, tail_mask, fill_between, observed_weights
 
 # Knockoff matrix generation by autoencoder for multiple subjects
 # Input:
@@ -182,7 +182,8 @@ class DeepLINK_T():
     # Missing time points are rows of X that are NaN in every feature. The knockoffs are then
     # generated from the observed time points, and X, the knockoffs and a sequence response are
     # Kalman-imputed at the missing time points up to each subject's last observed one; the time
-    # points after it are end padding.
+    # points after it are end padding. The imputed responses get weight 0 in the prediction loss,
+    # so only the observed responses are fitted.
     def infer(self):
         mask = np.isnan(self.X).all(axis=2)
         if not mask.any():
@@ -200,8 +201,11 @@ class DeepLINK_T():
             y = self.y
             if self.response_type == 'sequence':
                 y = fill_between(np.reshape(y, mask.shape + (-1,)), mask)
-            tail = tail_mask(mask)
-            weights = (~tail).astype(float) if tail.any() else None
+            if self.response_type == 'sequence':
+                weights = observed_weights(mask)
+            else:
+                tail = tail_mask(mask)
+                weights = (~tail).astype(float) if tail.any() else None
 
             # compute knockoff statistics
             self.W = self.knockoff_stats(self.Xnew, y, verb=0, weights=weights)

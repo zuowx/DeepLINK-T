@@ -42,7 +42,8 @@ class Simulation():
 
     # Response vector generation for multiple subjects, at the observed time points only
     # Output:
-    #   [coefficient vector, response vector (NaN at the missing time points)]
+    #   [coefficient vector, response vector (NaN at the missing time points; DeepLINK_T.infer
+    #    leaves them out of the prediction loss)]
     def rvg(self, X_ms):
         m, n, p = X_ms.shape
         mask = np.isnan(X_ms).all(axis=2)

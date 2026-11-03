@@ -1,8 +1,8 @@
-ex1 contains metagenomic data from gut microbiome of early infants. The response of the abundance level of *Bacteroides* or *Bacteroides* is inside each csv file. The original data can be obtained from 
+ex1 contains metagenomic data from gut microbiome of early infants. The response of the abundance level of *Bacteroides* or *Bifidobacterium* is inside each csv file. Each file has one row per month of age (0 to 23); empty rows are months without a sample. The original data can be obtained from 
 
 [Bokulich, N.A., Chung, J., Battaglia, T., Henderson, N., Jay, M., Li, H., D. Lieber, A., Wu, F., Perez-Perez, G.I., Chen, Y., et al.: Antibiotics, birth mode, and diet shape microbiome maturation during early life. Science Translational Medicine 8(343), 343–82 (2016)](https://www.science.org/doi/abs/10.1126/scitranslmed.aad7121)
 
-ex2 contains metagenomic data from San Pedro Ocean time series. The response of the chlorophyll-a concentration or leucine incorporation rate is inside each csv file. The original data can be obtained from
+ex2 contains metagenomic data from San Pedro Ocean time series. The response of the chlorophyll-a concentration or leucine incorporation rate is inside each csv file. Rows are the 211 months from January 2001 to July 2018; empty rows are months without a sample. The original data can be obtained from
 
 [Yeh, Y.-C., Fuhrman, J.A.: Contrasting diversity patterns of prokaryotes and protists over time and depth at the San-Pedro Ocean Time series. ISME Communications 2(1), 36 (2022)](https://www.nature.com/articles/s43705-022-00121-8)
 
